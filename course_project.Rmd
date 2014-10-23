@@ -1,0 +1,98 @@
+---
+title: "Practical Machine Learning Course Project"
+output: html_document
+theme: journal
+---
+
+## Executive Summary
+
+This paper documents the development and testing of a model for predicting how a person performed a bicep curl (a common weight training exercise) using sensor data. The data for the paper is derived from the Human Activity Recognition (HAR) dataset developed as part of the HAR project within the Laboratory of Software Engineering (LES) at the Pontifical Catholic University or Rio de Janeiro (PUC-Rio). Detailed information on the HAR project and the HAR datasets can be found on the group web page, [http://groupware.les.inf.puc-rio.br/har#sbia_paper_section](http://groupware.les.inf.puc-rio.br/har#sbia_paper_section).
+
+Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.5% accuracy with a 95% confidence interval of [98.1%, 98.8%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.
+
+In the spirit of reproducible research, the R code used to build and test the model is embedded within the paper.
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(data.table)
+library(randomForest)
+
+set.seed(1337)
+```
+
+```{r cache=TRUE}
+trainingSet <- read.csv("pml-training.csv")
+testingSet <- read.csv("pml-testing.csv")
+```
+
+## Data Processing
+
+The HAR dataset contains a number of non-numeric and summary measures that are not amenable, or not required for the development of a general-purpose predictive model; these were removed from both the training and testing data sets prior to model development. Specifically, the following fields were removed:
+
+* the field for subject name (i.e. the person performing the exercise);
+* all timestamp and data information; and
+* all measurment window indicators (new window, window number).
+
+Also removed from both data sets were summary measurements, such as the kurtosis of the measured variable, that are calcuable from the raw measurement data, and are sparsely recorded, i.e. the majority of records contain no value for these variables. The 56 columns remaining after data processing are shown in the R code excerpt below.
+
+```{r}
+trimDataSet <- function(x) { 
+  return(x[names(x) %like% "^(raw_|num_|roll_|pitch_|yaw_|total_|gyros_|accel_|magnet_|classe)"]) 
+}
+
+trainingSet <- trimDataSet(trainingSet)
+testingSet <- trimDataSet(testingSet)
+names(trainingSet)
+```
+
+We sub-divided the supplied training data set into a training set, comprising 75% of the original data, and a cross-validation set, comprising the remaining 25% of the original data, for validation and refinement of the model derived from the training subset.
+
+```{r}
+trainingElements <- createDataPartition(trainingSet$classe, p=0.75, list=FALSE)
+train <- trainingSet[trainingElements, ]
+test <- trainingSet[-trainingElements, ]
+```
+
+Prior to model training the two data sets were centered and scaled (i.e. normalized) in an attempt to remove skewedness, and a primary component analysis was done to eliminate highly correlated predictors; reducing the number of variables to the minimum required to capture 95% of the variance in the data sets.
+
+```{r}
+preProc <- preProcess(train[-56], method=c("center","scale","pca"), threshold=0.95)
+preProc
+```
+
+The pre-processing reduced the original 56 columns to just the 26 necessary to retain the significant majority of the variance in the data set.
+
+## Results
+
+The model was trained using the pre-processed data and the defaults for the R caret package's train function, i.e. random forest training with bootstrap resampling.
+
+```{r cache=TRUE}
+preProcTrain <- predict(preProc, train[-56])
+model <- train(train$classe ~ ., data=preProcTrain)
+model
+```
+
+### Cross-validation and Error Estimates
+
+We then validated the model against the cross-validation set created earlier. The confusion matrix and error measures of the model are shown in the R output below.
+
+```{r}
+preProcTest <- predict(preProc, test[-56])
+testPredictions <- predict(model, preProcTest)
+confusionMatrix(test$classe, testPredictions)
+```
+
+The model exhibits an overall accuracy of 98.5% with a 95% confidence interval of [98.1%, 98.8%] when applied to the cross-validation set. Since the cross-validation set was not used in training the model we would expect to see similar accuracy, specificity, sensitivty, etc. when the model is applied to set of sensor data without known outcomes.
+
+### Out-of-sample Application
+
+Satisfied with the accuracy of the model, we applied the model to an out-of-sample data set supplied by the course instructors. The results of the analysis are shown below.
+
+```{r}
+oosSet <- predict(preProc, testingSet[-56])
+oosPredictions <- predict(model, oosSet)
+oosPredictions
+```
+
