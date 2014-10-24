@@ -184,7 +184,7 @@ confusionMatrix(train$classe, trainPredictions)</code></pre>
 ## Detection Rate          0.284    0.194    0.174    0.164    0.184
 ## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
 ## Balanced Accuracy       1.000    1.000    1.000    1.000    1.000</code></pre>
-<p>This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the test data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.</p>
+<p>This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the training data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.</p>
 <div id="cross-validation-and-error-estimates" class="section level3">
 <h3>Cross-validation and Error Estimates</h3>
 <p>We then validated the model against the cross-validation set created earlier. The confusion matrix and error measures of the model are shown in the R output below.</p>

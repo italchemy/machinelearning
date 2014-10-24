@@ -83,7 +83,7 @@ trainPredictions <- predict(model, preProcTrain)
 confusionMatrix(train$classe, trainPredictions)
 ```
 
-This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the test data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.
+This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the training data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.
 
 ### Cross-validation and Error Estimates
 
