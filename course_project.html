@@ -58,6 +58,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="executive-summary" class="section level2">
 <h2>Executive Summary</h2>
 <p>This paper documents the development and testing of a model for predicting how a person performed a bicep curl (a common weight training exercise) using sensor data. The data for the paper is derived from the Human Activity Recognition (HAR) dataset developed as part of the HAR project within the Laboratory of Software Engineering (LES) at the Pontifical Catholic University or Rio de Janeiro (PUC-Rio). Detailed information on the HAR project and the HAR datasets can be found on the group web page, <a href="http://groupware.les.inf.puc-rio.br/har#sbia_paper_section"><a href="http://groupware.les.inf.puc-rio.br/har#sbia_paper_section">http://groupware.les.inf.puc-rio.br/har#sbia_paper_section</a></a>.</p>
+<p>This paper deals specifically with predicting the form exhibited when subjects performed a bicep curl. The form was classified into one of five classes (A, B, C, D, and E) with one class representing perfect form, and the remaining classes representing common errors in the performance of the exercise (e.g. arching of the back).</p>
 <p>Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.5% accuracy with a 95% confidence interval of [98.1%, 98.8%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.</p>
 <p>In the spirit of reproducible research, the R code used to build and test the model is embedded within the paper.</p>
 <pre class="r"><code>library(lattice)
@@ -110,23 +111,22 @@ names(trainingSet)</code></pre>
 <pre class="r"><code>trainingElements &lt;- createDataPartition(trainingSet$classe, p=0.75, list=FALSE)
 train &lt;- trainingSet[trainingElements, ]
 test &lt;- trainingSet[-trainingElements, ]</code></pre>
-<p>Prior to model training the two data sets were centered and scaled (i.e. normalized) in an attempt to remove skewedness, and a primary component analysis was done to eliminate highly correlated predictors; reducing the number of variables to the minimum required to capture 95% of the variance in the data sets.</p>
-<pre class="r"><code>preProc &lt;- preProcess(train[-56], method=c(&quot;center&quot;,&quot;scale&quot;,&quot;pca&quot;), threshold=0.95)
+<p>Prior to model training a primary component analysis was done to eliminate highly correlated predictors; reducing the number of variables to the minimum required to capture 95% of the variance in the data sets.</p>
+<pre class="r"><code>preProc &lt;- preProcess(train[-56], method=c(&quot;pca&quot;), threshold=0.95)
 preProc</code></pre>
 <pre><code>## 
 ## Call:
-## preProcess.default(x = train[-56], method = c(&quot;center&quot;, &quot;scale&quot;,
-##  &quot;pca&quot;), threshold = 0.95)
+## preProcess.default(x = train[-56], method = c(&quot;pca&quot;), threshold = 0.95)
 ## 
 ## Created from 14718 samples and 55 variables
-## Pre-processing: centered, scaled, principal component signal extraction 
+## Pre-processing: principal component signal extraction, scaled, centered 
 ## 
 ## PCA needed 26 components to capture 95 percent of the variance</code></pre>
 <p>The pre-processing reduced the original 56 columns to just the 26 necessary to retain the significant majority of the variance in the data set.</p>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
-<p>The model was trained using the pre-processed data and the defaults for the R caret package’s train function, i.e. random forest training with bootstrap resampling.</p>
+<p>The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation.</p>
 <pre class="r"><code>preProcTrain &lt;- predict(preProc, train[-56])
 model &lt;- train(train$classe ~ ., data=preProcTrain)
 model</code></pre>
@@ -150,6 +150,41 @@ model</code></pre>
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 2.</code></pre>
+<p>Applying the model to the training set we get the confusion matrix and error measures shown below.</p>
+<pre class="r"><code>trainPredictions &lt;- predict(model, preProcTrain)
+confusionMatrix(train$classe, trainPredictions)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 4185    0    0    0    0
+##          B    0 2848    0    0    0
+##          C    0    0 2567    0    0
+##          D    0    0    0 2412    0
+##          E    0    0    0    0 2706
+## 
+## Overall Statistics
+##                                 
+##                Accuracy : 1     
+##                  95% CI : (1, 1)
+##     No Information Rate : 0.284 
+##     P-Value [Acc &gt; NIR] : &lt;2e-16
+##                                 
+##                   Kappa : 1     
+##  Mcnemar's Test P-Value : NA    
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity             1.000    1.000    1.000    1.000    1.000
+## Specificity             1.000    1.000    1.000    1.000    1.000
+## Pos Pred Value          1.000    1.000    1.000    1.000    1.000
+## Neg Pred Value          1.000    1.000    1.000    1.000    1.000
+## Prevalence              0.284    0.194    0.174    0.164    0.184
+## Detection Rate          0.284    0.194    0.174    0.164    0.184
+## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
+## Balanced Accuracy       1.000    1.000    1.000    1.000    1.000</code></pre>
+<p>This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the test data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.</p>
 <div id="cross-validation-and-error-estimates" class="section level3">
 <h3>Cross-validation and Error Estimates</h3>
 <p>We then validated the model against the cross-validation set created earlier. The confusion matrix and error measures of the model are shown in the R output below.</p>
