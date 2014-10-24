@@ -10,7 +10,7 @@ This paper documents the development and testing of a model for predicting how a
 
 This paper deals specifically with predicting the form exhibited when subjects performed a bicep curl. The form was classified into one of five classes (A, B, C, D, and E) with one class representing perfect form, and the remaining classes representing common errors in the performance of the exercise (e.g. arching of the back).
 
-Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.5% accuracy with a 95% confidence interval of [98.1%, 98.8%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.
+Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.2% accuracy with a 95% confidence interval of [97.8%, 98.6%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.
 
 In the spirit of reproducible research, the R code used to build and test the model is embedded within the paper.
 
@@ -68,22 +68,20 @@ The pre-processing reduced the original 56 columns to just the 26 necessary to r
 
 ## Results
 
-The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation to refine the predictor estimates.
+The model was trained using the pre-processed data and random forest training with 500 trees, and 5 variables tried at each split (the defaults). The results of this are shown in the R code below.
 
-```{r cache=TRUE}
+```{r}
 preProcTrain <- predict(preProc, train[-56])
-model <- train(train$classe ~ ., data=preProcTrain)
+model <- randomForest(train$classe ~ ., data=preProcTrain)
 model
 ```
 
-Applying the model to the training set we get the confusion matrix and error measures shown below.
+The estimated out-of-bag (OOB) error rate for the model is 2.11% which, given that the OOB error estimate in known to be unbiased, is what we would expect to see when the model is applied to an out-of-sample data set. Iterative training of the model using a different number of variables at each split yielded a model with a 1.98% OOB error rate estimate (see below). This is the model we selected for further testing.
 
 ```{r}
-trainPredictions <- predict(model, preProcTrain)
-confusionMatrix(train$classe, trainPredictions)
+model <- randomForest(train$classe ~ ., data=preProcTrain, mtry=2)
+model
 ```
-
-This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the training data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.
 
 ### Cross-validation and Error Estimates
 
@@ -95,7 +93,7 @@ testPredictions <- predict(model, preProcTest)
 confusionMatrix(test$classe, testPredictions)
 ```
 
-The model exhibits an overall accuracy of 98.5% with a 95% confidence interval of [98.1%, 98.8%] when applied to the cross-validation set. Since the cross-validation set was not used in training the model we would expect to see similar accuracy, specificity, sensitivty, etc. when the model is applied to set of sensor data without known outcomes.
+The model exhibits an overall accuracy of 98.2% with a 95% confidence interval of [97.8%, 98.6%] when applied to the cross-validation set; consistent with the 1.98% OOB error rate estimate calculated for the model. We would expect to see similar error rates when the model is applied to set of sensor data without known outcomes.
 
 ### Out-of-sample Application
 

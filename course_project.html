@@ -59,7 +59,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h2>Executive Summary</h2>
 <p>This paper documents the development and testing of a model for predicting how a person performed a bicep curl (a common weight training exercise) using sensor data. The data for the paper is derived from the Human Activity Recognition (HAR) dataset developed as part of the HAR project within the Laboratory of Software Engineering (LES) at the Pontifical Catholic University or Rio de Janeiro (PUC-Rio). Detailed information on the HAR project and the HAR datasets can be found on the group web page, <a href="http://groupware.les.inf.puc-rio.br/har#sbia_paper_section"><a href="http://groupware.les.inf.puc-rio.br/har#sbia_paper_section">http://groupware.les.inf.puc-rio.br/har#sbia_paper_section</a></a>.</p>
 <p>This paper deals specifically with predicting the form exhibited when subjects performed a bicep curl. The form was classified into one of five classes (A, B, C, D, and E) with one class representing perfect form, and the remaining classes representing common errors in the performance of the exercise (e.g. arching of the back).</p>
-<p>Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.5% accuracy with a 95% confidence interval of [98.1%, 98.8%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.</p>
+<p>Using a subset of the HAR dataset, supplied by the Practical Machine Learning instructor, we were able to construct a model that correctly identifies the form of bicep curl performed by the subject with 98.2% accuracy with a 95% confidence interval of [97.8%, 98.6%] against a known test data set. Based on these results we expect the model to exhibit similar accuracy when applied to sensor readings without a known outcome.</p>
 <p>In the spirit of reproducible research, the R code used to build and test the model is embedded within the paper.</p>
 <pre class="r"><code>library(lattice)
 library(ggplot2)
@@ -126,65 +126,43 @@ preProc</code></pre>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
-<p>The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation to refine the predictor estimates.</p>
+<p>The model was trained using the pre-processed data and random forest training with 500 trees, and 5 variables tried at each split (the defaults). The results of this are shown in the R code below.</p>
 <pre class="r"><code>preProcTrain &lt;- predict(preProc, train[-56])
-model &lt;- train(train$classe ~ ., data=preProcTrain)
+model &lt;- randomForest(train$classe ~ ., data=preProcTrain)
 model</code></pre>
-<pre><code>## Random Forest 
+<pre><code>## 
+## Call:
+##  randomForest(formula = train$classe ~ ., data = preProcTrain) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 5
 ## 
-## 14718 samples
-##    25 predictors
-##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+##         OOB estimate of  error rate: 2.11%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 4148   13   10   10    4    0.008841
+## B   39 2764   35    3    7    0.029494
+## C    7   36 2504   19    1    0.024542
+## D    3    4   76 2321    8    0.037728
+## E    3    8    8   16 2671    0.012934</code></pre>
+<p>The estimated out-of-bag (OOB) error rate for the model is 2.11% which, given that the OOB error estimate in known to be unbiased, is what we would expect to see when the model is applied to an out-of-sample data set. Iterative training of the model using a different number of variables at each split yielded a model with a 1.98% OOB error rate estimate (see below). This is the model we selected for further testing.</p>
+<pre class="r"><code>model &lt;- randomForest(train$classe ~ ., data=preProcTrain, mtry=2)
+model</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(formula = train$classe ~ ., data = preProcTrain,      mtry = 2) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 2
 ## 
-## No pre-processing
-## Resampling: Bootstrapped (25 reps) 
-## 
-## Summary of sample sizes: 14718, 14718, 14718, 14718, 14718, 14718, ... 
-## 
-## Resampling results across tuning parameters:
-## 
-##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
-##    2    1.0       1.0    0.003        0.004   
-##   14    1.0       0.9    0.003        0.004   
-##   26    0.9       0.9    0.006        0.007   
-## 
-## Accuracy was used to select the optimal model using  the largest value.
-## The final value used for the model was mtry = 2.</code></pre>
-<p>Applying the model to the training set we get the confusion matrix and error measures shown below.</p>
-<pre class="r"><code>trainPredictions &lt;- predict(model, preProcTrain)
-confusionMatrix(train$classe, trainPredictions)</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 4185    0    0    0    0
-##          B    0 2848    0    0    0
-##          C    0    0 2567    0    0
-##          D    0    0    0 2412    0
-##          E    0    0    0    0 2706
-## 
-## Overall Statistics
-##                                 
-##                Accuracy : 1     
-##                  95% CI : (1, 1)
-##     No Information Rate : 0.284 
-##     P-Value [Acc &gt; NIR] : &lt;2e-16
-##                                 
-##                   Kappa : 1     
-##  Mcnemar's Test P-Value : NA    
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             1.000    1.000    1.000    1.000    1.000
-## Specificity             1.000    1.000    1.000    1.000    1.000
-## Pos Pred Value          1.000    1.000    1.000    1.000    1.000
-## Neg Pred Value          1.000    1.000    1.000    1.000    1.000
-## Prevalence              0.284    0.194    0.174    0.164    0.184
-## Detection Rate          0.284    0.194    0.174    0.164    0.184
-## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
-## Balanced Accuracy       1.000    1.000    1.000    1.000    1.000</code></pre>
-<p>This shows a perfect fit of the model to the training data (100% accuracy) which suggests the classes are highly stratified, or, a more likely scenario, the model is over-fit to the training data. We would expect to the model to exhibit less accuracy when applied to the cross-validation set.</p>
+##         OOB estimate of  error rate: 1.98%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 4149    8   10   12    6    0.008602
+## B   34 2770   38    1    5    0.027388
+## C    6   31 2511   17    2    0.021815
+## D    3    4   80 2319    6    0.038557
+## E    3    6    6   13 2678    0.010347</code></pre>
 <div id="cross-validation-and-error-estimates" class="section level3">
 <h3>Cross-validation and Error Estimates</h3>
 <p>We then validated the model against the cross-validation set created earlier. The confusion matrix and error measures of the model are shown in the R output below.</p>
@@ -195,34 +173,34 @@ confusionMatrix(test$classe, testPredictions)</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1388    1    2    4    0
-##          B    6  935    8    0    0
-##          C    2   10  840    3    0
-##          D    0    1   33  770    0
-##          E    0    0    1    5  895
+##          A 1386    1    2    5    1
+##          B    9  931    9    0    0
+##          C    2   12  837    4    0
+##          D    1    0   36  767    0
+##          E    0    0    1    4  896
 ## 
 ## Overall Statistics
 ##                                         
-##                Accuracy : 0.985         
-##                  95% CI : (0.981, 0.988)
+##                Accuracy : 0.982         
+##                  95% CI : (0.978, 0.986)
 ##     No Information Rate : 0.285         
 ##     P-Value [Acc &gt; NIR] : &lt;2e-16        
 ##                                         
-##                   Kappa : 0.98          
+##                   Kappa : 0.978         
 ##  Mcnemar's Test P-Value : NA            
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             0.994    0.987    0.950    0.985    1.000
-## Specificity             0.998    0.996    0.996    0.992    0.999
-## Pos Pred Value          0.995    0.985    0.982    0.958    0.993
-## Neg Pred Value          0.998    0.997    0.989    0.997    1.000
-## Prevalence              0.285    0.193    0.180    0.159    0.183
-## Detection Rate          0.283    0.191    0.171    0.157    0.183
+## Sensitivity             0.991    0.986    0.946    0.983    0.999
+## Specificity             0.997    0.995    0.996    0.991    0.999
+## Pos Pred Value          0.994    0.981    0.979    0.954    0.994
+## Neg Pred Value          0.997    0.997    0.988    0.997    1.000
+## Prevalence              0.285    0.192    0.180    0.159    0.183
+## Detection Rate          0.283    0.190    0.171    0.156    0.183
 ## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
-## Balanced Accuracy       0.996    0.992    0.973    0.988    0.999</code></pre>
-<p>The model exhibits an overall accuracy of 98.5% with a 95% confidence interval of [98.1%, 98.8%] when applied to the cross-validation set. Since the cross-validation set was not used in training the model we would expect to see similar accuracy, specificity, sensitivty, etc. when the model is applied to set of sensor data without known outcomes.</p>
+## Balanced Accuracy       0.994    0.991    0.971    0.987    0.999</code></pre>
+<p>The model exhibits an overall accuracy of 98.2% with a 95% confidence interval of [97.8%, 98.6%] when applied to the cross-validation set; consistent with the 1.98% OOB error rate estimate calculated for the model. We would expect to see similar error rates when the model is applied to set of sensor data without known outcomes.</p>
 </div>
 <div id="out-of-sample-application" class="section level3">
 <h3>Out-of-sample Application</h3>
@@ -230,7 +208,8 @@ confusionMatrix(test$classe, testPredictions)</code></pre>
 <pre class="r"><code>oosSet &lt;- predict(preProc, testingSet[-56])
 oosPredictions &lt;- predict(model, oosSet)
 oosPredictions</code></pre>
-<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+<pre><code>##  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 
+##  B  A  B  A  A  E  D  B  A  A  B  C  B  A  E  E  A  B  B  B 
 ## Levels: A B C D E</code></pre>
 </div>
 </div>
