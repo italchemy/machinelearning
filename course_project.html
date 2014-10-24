@@ -126,7 +126,7 @@ preProc</code></pre>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
-<p>The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation.</p>
+<p>The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation to refine the predictor estimates.</p>
 <pre class="r"><code>preProcTrain &lt;- predict(preProc, train[-56])
 model &lt;- train(train$classe ~ ., data=preProcTrain)
 model</code></pre>

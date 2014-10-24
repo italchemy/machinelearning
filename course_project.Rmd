@@ -68,7 +68,7 @@ The pre-processing reduced the original 56 columns to just the 26 necessary to r
 
 ## Results
 
-The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation.
+The model was trained using the pre-processed data and a random forest training with 500 trees and bootstrap cross-validation to refine the predictor estimates.
 
 ```{r cache=TRUE}
 preProcTrain <- predict(preProc, train[-56])
